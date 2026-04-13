@@ -44,25 +44,40 @@ def mod_inv(a: int, p: int) -> int:
 
 def compute_a(p: int, q: int) -> int:
     print(f"\n{'='*60}")
-    print(f"  АВТОВЫЧИСЛЕНИЕ ПАРАМЕТРА a")
+    print(f"  ВЫЧИСЛЕНИЕ ПАРАМЕТРА a")
     print(f"{'='*60}")
     print(f"  Формула: a = d^((p-1)/q) mod p")
-    print(f"  Условие: a != 1  и  a^q mod p = 1")
+    print(f"  Условие: a != 1 и a^q mod p = 1")
     print(f"  (p-1)/q = ({p}-1)/{q} = {(p-1)//q}\n")
     exp = (p - 1) // q
     print(f"  {'d':<6} {'Вычисление':<30} {'a':<8} {'a^q mod p':<12} {'Статус'}")
     print(f"  {'-'*65}")
+    candidates = []
     for d in range(2, p):
         a = pow(d, exp, p)
         check = pow(a, q, p)
         ok = (a != 1) and (check == 1)
         print(f"  {d:<6} {d}^{exp} mod {p:<6} {a:<8} {check:<12} {'✓ принят' if ok else '✗ пропуск'}")
         if ok:
-            print(f"\n  >>> a = {a}  (при d = {d})")
-            print(f"  Проверка: {a}^{q} mod {p} = {check} = 1  ✓")
-            return a
-    raise ValueError("Не удалось найти подходящее a!")
-
+            candidates.append((d, a))
+    if not candidates:
+        raise ValueError("Не удалось найти подходящее a!")
+    valid_a = sorted(set(a for (d, a) in candidates))
+    print(f"\n  {'='*58}")
+    print(f"  Подходящие значения a: {valid_a}")
+    print()
+    while True:
+        try:
+            chosen_a = int(input(f"  Введите значение a: "))
+            if chosen_a in valid_a:
+                chosen_d = next(d for (d, a) in candidates if a == chosen_a)
+                print(f"\n  >>> Выбрано: a = {chosen_a} (при d = {chosen_d})")
+                print(f"  Проверка: {chosen_a}^{q} mod {p} = {pow(chosen_a, q, p)} = 1 ✓")
+                return chosen_a
+            else:
+                print(f"  Ошибка! Допустимые значения: {valid_a}")
+        except ValueError:
+            print("  Введите корректное целое число!")
 
 def point_add(P, Q, a: int, p: int):
     if P is None:

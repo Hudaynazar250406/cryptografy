@@ -120,17 +120,29 @@ def composition(point, k: int, a: int, p: int):
 
 def RSA_cipher(operation, text):
     print("\n── RSA ШИФРОВАНИЕ ──")
+    max_index = len(task_alphabet)  # 31
     if operation == 1:
-        p = int(input("  Введите P (простое): "))
-        q = int(input("  Введите Q (простое): "))
-        if not is_prime(p) or not is_prime(q):
-            print("  P и Q должны быть простыми!"); return
-        n = p * q; phi = (p - 1) * (q - 1)
-        print(f"  N = {p}×{q} = {n}")
+        while True:
+            p = int(input("  Введите P (простое): "))
+            q = int(input("  Введите Q (простое): "))
+            if not is_prime(p) or not is_prime(q):
+                print("  ❌ P и Q должны быть простыми!")
+                continue
+            n = p * q
+            if n <= max_index:
+                print(f"  ❌ N = {p}×{q} = {n} слишком мало!")
+                print(f"     Нужно N > {max_index} (размер алфавита)")
+                print(f"     Подсказка: попробуйте P={5}, Q={7} → N=35")
+                continue
+            break
+        phi = (p - 1) * (q - 1)
+        print(f"  N = {p}×{q} = {n}  ✅ (N > {max_index})")
         print(f"  φ(N) = ({p}-1)×({q}-1) = {phi}")
-        e = int(input(f"  Введите E (1 < E < {phi}): "))
+        e = int(input(f"  Введите E (1 < E < {phi}, взаимно простое с φ(N)): "))
         while gcd(e, phi) != 1 or e >= phi or e <= 1:
-            print("  E не подходит, автовыбор..."); e = sympy.randprime(3, phi)
+            print(f"  ❌ E не взаимно просто с φ(N)={phi}, автовыбор...")
+            e = sympy.randprime(3, phi)
+        print(f"  E = {e}  ✅")
         d = eq(e, 1, phi)
         print(f"  D = {d}  (секретный ключ)")
         print(f"  Открытый ключ:  (E={e}, N={n})")
@@ -139,37 +151,72 @@ def RSA_cipher(operation, text):
         print("  Зашифрованный текст:", " ".join(map(str, ciphertext)))
 
     if operation == 2:
-        n = int(input("  Введите N: "))
+        while True:
+            n = int(input("  Введите N: "))
+            if n <= max_index:
+                print(f"  ❌ N={n} слишком мало! Нужно N > {max_index}")
+                continue
+            break
         d = int(input("  Введите D: "))
         pairs = list(map(int, text.split()))
         result_text = "".join(task_alphabet[pow(c, d, n) - 1] for c in pairs)
         print("  Расшифрованный текст:", decryption_format(result_text))
 
 
+def get_valid_k_list(phi: int, p: int) -> list:
+    """Возвращает все допустимые k: 1 < k < p, НОД(k, phi) = 1"""
+    return [k for k in range(2, p) if gcd(k, phi) == 1]
+
+
 def ElGamal_cipher(operation, text):
     print("\n── ELGAMAL ШИФРОВАНИЕ ──")
-    p = int(input("  Введите p (простое, > 32): "))
-    if not is_prime(p) or p < 32:
-        print("  p должно быть простым и > 32!"); return
-    g = int(input(f"  Введите g (1 < g < {p}): "))
+    max_index = len(task_alphabet)  # 31
+
+    # Ввод и проверка p
+    while True:
+        p = int(input("  Введите p (простое): "))
+        if not is_prime(p):
+            print("  ❌ p должно быть простым!"); continue
+        if p <= max_index:
+            print(f"  ❌ p={p} слишком мало! Нужно p > {max_index}")
+            print(f"     Минимум: p = 37"); continue
+        break
+
     phi = p - 1
+    valid_k = get_valid_k_list(phi, p)
+    print(f"  ✅ p={p}, φ(p)={phi}")
+    print(f"  Допустимые значения k (НОД(k,{phi})=1, 1<k<{p}):")
+    print(f"  {valid_k}")
+
+    g = int(input(f"  Введите g (1 < g < {p}): "))
+    if not (1 < g < p):
+        print("  ❌ g вне диапазона!"); return
 
     if operation == 1:
-        x = int(input(f"  Введите x — секретный ключ: "))
+        x = int(input(f"  Введите x — секретный ключ (1 < x < {p}): "))
+        if not (1 < x < p):
+            print("  ❌ x вне диапазона!"); return
         y = pow(g, x, p)
         print(f"  y = {g}^{x} mod {p} = {y}")
         print(f"  Открытые ключи: p={p}, g={g}, y={y}")
+        print(f"  Секретный ключ: x={x}")
+
         digit_text = digitization(text)
         result_text = []
         print("\n  Шифрование по символам:")
         for i, mi in enumerate(digit_text):
-            k = int(input(f"    k[{i+1}] для '{task_alphabet[mi-1]}' (m={mi}): "))
-            while gcd(k, phi) != 1 or k <= 1 or k >= p:
-                print("    k не подходит!"); k = int(input(f"    k[{i+1}]: "))
-            a_i = pow(g, k, p); b_i = (pow(y, k, p) * mi) % p
-            print(f"    → a={a_i}, b={b_i}")
+            print(f"    Символ '{task_alphabet[mi-1]}' (m={mi})")
+            print(f"    Допустимые k: {valid_k}")
+            k = int(input(f"    Введите k[{i+1}]: "))
+            while k not in valid_k:
+                print(f"    ❌ k={k} не подходит! Выбери из: {valid_k}")
+                k = int(input(f"    Введите k[{i+1}]: "))
+            a_i = pow(g, k, p)
+            b_i = (pow(y, k, p) * mi) % p
+            print(f"    ✅ a = g^k mod p = {g}^{k} mod {p} = {a_i}")
+            print(f"       b = y^k * m mod p = {y}^{k} * {mi} mod {p} = {b_i}")
             result_text.extend([a_i, b_i])
-        print("  Зашифрованный текст:", " ".join(map(str, result_text)))
+        print("\n  Зашифрованный текст:", " ".join(map(str, result_text)))
 
     if operation == 2:
         x = int(input("  Введите x — секретный ключ: "))

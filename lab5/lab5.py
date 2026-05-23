@@ -176,7 +176,7 @@ while True:
 
     print("\nВыберите действие:")
     print("  1. Шифрование")
-    print("  2. Дешифрование")
+    print("  2. расшифрование")
 
     try:
         operation = int(input("Ваш выбор: "))
